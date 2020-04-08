@@ -1,0 +1,24 @@
+{
+  "name": "reaction-export-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --experimental-json-modules index.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bob620/reaction-export-bot.git"
+  },
+  "author": "Bob620",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Bob620/reaction-export-bot/issues"
+  },
+  "homepage": "https://github.com/Bob620/reaction-export-bot#readme",
+  "dependencies": {
+    "discord.js": "^12.1.1"
+  }
+}
