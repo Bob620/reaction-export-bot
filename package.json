@@ -19,6 +19,6 @@
   },
   "homepage": "https://github.com/Bob620/reaction-export-bot#readme",
   "dependencies": {
-    "discord.js": "^12.1.1"
+    "discord.js": "^12.5.3"
   }
 }
