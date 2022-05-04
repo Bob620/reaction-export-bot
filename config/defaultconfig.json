@@ -1,5 +1,11 @@
 {
-  "botToken": "",
-  "guildID": "",
-  "outputFile": "output.csv"
+	"botToken": "",
+	"guildID": "",
+	"outputFile": "output.csv",
+	"roleSets": [
+		[
+			567911418934853647,
+			695461198048788570
+		]
+	]
 }

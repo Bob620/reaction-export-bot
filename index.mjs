@@ -16,7 +16,7 @@ function question(query) {
 	return new Promise(resolve => face.question(query, resolve));
 }
 
-let state = {
+const state = {
 	client,
 	guild: undefined,
 	channel: undefined
@@ -35,7 +35,7 @@ async function genInfo() {
 				info = `${state.channel.guild.name}#${state.channel.name}`;
 				break;
 		}
-	else if (state.guild && state.guild.available)
+	else if (state.guild)
 		info = `${state.guild.name}`;
 	return info;
 }
@@ -66,6 +66,11 @@ async function mainMenu() {
 	console.log('2) Search Guild Channels');
 	console.log('3) Enter Channel ID');
 	console.log(`4) Enter Message ID(s)`);
+	console.log(`5) Enter Message ID Range`);
+
+	let ids;
+	let reactions;
+	let reactionPos;
 
 	const req = await question(`[${await genInfo()}]> `);
 	switch(req) {
@@ -74,7 +79,7 @@ async function mainMenu() {
 			state.channel = undefined;
 			break;
 		case '2':
-			if (state.guild && state.guild.available)
+			if (state.guild)
 				await guildMenu();
 			else
 				console.log('No channels available, try later or another option');
@@ -83,11 +88,11 @@ async function mainMenu() {
 			state.channel = await getChannel(await question(`ID: `));
 			break;
 		case '4':
-			let reactions = new Map();
+			ids = (await question(`ID( ID ID...): `)).replace(',', '').split(' ').filter(i => i);
 
-			let ids = (await question(`ID( ID ID...): `)).split(' ').filter(i => i);
+			reactions = new Map();
+			reactionPos = 0;
 
-			let reactionPos = 0;
 			for (const id of ids) {
 				for (const [userId, {emote, user}] of (await processMessage(await getMessage(id)))) {
 					if (!reactions.has(userId))
@@ -96,6 +101,40 @@ async function mainMenu() {
 				}
 				reactionPos++;
 			}
+
+			await outputCSV(config.outputFile, reactions.values());
+			break;
+		case '5':
+			ids = (await question(`startID endID: `)).replace(',', '').split(' ').filter(i => i);
+			if (ids.length < 2) {
+				break;
+			}
+
+			let end = Discord.SnowflakeUtil.deconstruct(ids[1]);
+
+			let messages;
+			try {
+				messages = Array.from((await state.channel.messages.fetch({
+					limit: 100,
+					after: ids[0]
+				})).filter(m => Discord.SnowflakeUtil.deconstruct(m.id).date <= end.date).sort().values());
+				messages.unshift(await state.channel.messages.fetch(ids[0]));
+			} catch(e) {
+				console.log(e);
+			}
+
+			reactions = new Map();
+			reactionPos = 0;
+
+			await Promise.all(messages.map(async m => {
+				const pos = reactionPos;
+				reactionPos++;
+				for (const [userId, {emote, user}] of (await processMessage(m))) {
+					if (!reactions.has(userId))
+						reactions.set(userId, {user, emotes: []});
+					reactions.get(userId).emotes[pos] = emote;
+				}
+			}));
 
 			await outputCSV(config.outputFile, reactions.values());
 			break;
@@ -110,7 +149,7 @@ async function getGuild(guildID) {
 	console.log('Searching for guild...');
 
 	const guild = state.client.guilds.cache.get(guildID);
-	if (guild === undefined || !guild.available)
+	if (guild === undefined)
 		throw `Unable to find guild (${guildID})`;
 	console.log(`Found guild (${guildID})`);
 	return guild;
@@ -120,7 +159,7 @@ async function getChannel(channelID) {
 	console.log('Searching for channel...');
 
 	const channel = state.client.channels.cache.get(channelID);
-	if (channel === undefined || !channel.available)
+	if (channel === undefined)
 		throw `Unable to find channel (${channelID})`;
 	switch(channel.type) {
 		case 'dm':
@@ -137,12 +176,12 @@ async function getMessage(messageID) {
 	console.log('Searching for message...');
 
 	let message;
-	if (state.channel && state.channel.available)
+	if (state.channel)
 		try {
 			message = await state.channel.messages.fetch(messageID);
 		} catch(err) {
 		}
-	if ((!message || !message.available) && (state.guild && state.guild.available))
+	if ((!message) && (state.guild))
 		for (const [, channel] of state.guild.channels.cache)
 			if (channel.type !== 'voice' || 'category' || 'store')
 				try {
@@ -156,6 +195,7 @@ async function getMessage(messageID) {
 
 async function processMessage(message) {
 	console.log(`Processing message reactions (${message.id})...`);
+	await message.fetch(true);
 	const reactions = Array.from(await message.reactions.cache.entries()).slice(0, 2);
 
 	if (reactions.length < 2)
@@ -169,16 +209,37 @@ async function processMessage(message) {
 		reactionUsers = await reaction.users.fetch();
 		while (reactionUsers.size > 0) {
 			let user;
+			let matchesRoles = false;
 			for ([id, user] of reactionUsers) {
-				if (users.has(id) && !alreadyExist.includes(id))
-					alreadyExist.push(id);
-				users.set(id, {emote: reaction.emoji, user});
+				for (const j in config.roleSets) {
+					const roleIds = config.roleSets[j];
+					let hasAll = true;
+					for (const i in roleIds) {
+						let roleId = roleIds[i];
+						let mem = await state.guild.members.fetch(user.id);
+						if (!mem.roles.cache.has(roleId)) {
+							hasAll = false;
+							break;
+						}
+					}
+					if (hasAll) {
+						matchesRoles = true;
+						break;
+					}
+				}
+
+				if (matchesRoles) {
+					if (users.has(id) && !alreadyExist.includes(id))
+						alreadyExist.push(id);
+					users.set(id, {emote: reaction.emoji, user});
+				}
 			}
 			reactionUsers = await reaction.users.fetch({after: id});
 		}
 	}
 
-	console.log(`${alreadyExist.length} user${alreadyExist.length === 1 ? '' : 's'} reacted two or more times ${alreadyExist.length !== 0 ? '(Tch)' : ''}`);
+	if (alreadyExist.length > 1)
+		console.log(`${alreadyExist.length} user${alreadyExist.length === 1 ? '' : 's'} reacted two or more times ${alreadyExist.length !== 0 ? '(Tch)' : ''}`);
 	return users;
 }
 
@@ -201,8 +262,11 @@ async function outputCSV(fileName, reactions) {
 client.on('ready', async () => {
 	console.log(`Logged in as ${state.client.user.tag}\n`);
 	try {
-		state.guild = await getGuild(config.guildID);
-		state.channel = undefined;
+		if (config.guildID)
+			state.guild = await getGuild(config.guildID);
+
+		if (config.channelId)
+			state.channel = await getChannel(config.channelId);
 	} catch(err) {
 		console.error(err);
 	}
