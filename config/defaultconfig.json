@@ -1,11 +1,12 @@
 {
-	"botToken": "",
-	"guildID": "",
-	"outputFile": "output.csv",
-	"roleSets": [
+	"bot_token": "",
+	"guild_id": "",
+	"channel_id": "",
+	"default_output_file": "output.csv",
+	"role_sets": [
 		[
-			567911418934853647,
-			695461198048788570
+			"567911418934853647",
+			"695461198048788570"
 		]
 	]
 }

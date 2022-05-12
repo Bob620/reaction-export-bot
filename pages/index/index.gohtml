@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Title</title>
+	<link rel="stylesheet" href="index.css">
+	<script src="index.js"></script>
+</head>
+<body>
+<section>
+	<div class="settings">
+		<div>
+			<label for="guild_id">
+				Guild
+			</label>
+			<select name="guild_id" id="guild_id" onchange="SelectGuild(this.value)">
+                {{ range .Guilds }}
+					<option value="{{ .ID }}">
+                        {{ .Name }}
+						<img src="{{ .IconUrl }}" alt="Icon"/>
+					</option>
+                {{ end }}
+			</select>
+		</div>
+		<div>
+			<label for="channel_id">
+				Channel
+			</label>
+			<select name="channel_id" id="channel_id" onchange="SelectChannel(this.value)">
+                {{ range .SelectedGuild.Channels }}
+					<option value="{{ .ID }}" {{ if selectedChannel .ID }} selected {{ end }}>
+                        {{ .Name }}
+					</option>
+                {{ end }}
+			</select>
+		</div>
+		<div>
+			<button id="export" onclick="Export()">Export</button>
+		</div>
+	</div>
+	<div class="messages">
+        {{ range .Messages }}
+			<div class="messages-{{ .ID }}">
+				<div>
+					<input type="checkbox" name="messages" id="messages-{{ .ID }}" onchange="toggleMessage(this)">
+				</div>
+				<label for="messages-{{ .ID }}">
+					<h4>{{ .Author.Name }}%23{{ .Author.Discriminator }}</h4>
+					<p>{{ .Content }}</p>
+				</label>
+			</div>
+        {{ end }}
+	</div>
+</section>
+</body>
+</html>

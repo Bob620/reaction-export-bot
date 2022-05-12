@@ -1,0 +1,65 @@
+body {
+    background-color: rgb(32, 34, 36);
+    margin: 0;
+    color: white;
+    display: flex;
+    flex-direction: row;
+    overflow-x: hidden;
+}
+
+h1 {
+    font-size: 100px;
+}
+
+.settings {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+.settings > div {
+    width: fit-content;
+}
+
+.messages {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    flex-basis: max-content;
+}
+
+.messages > div {
+    margin: 0.1em;
+    padding: 0.2em;
+    user-select: none;
+    flex-direction: row;
+    display: flex;
+    flex-grow: 1;
+}
+
+.messages .selected-item {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.messages > div:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+.messages > div > div {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.messages > div h4 {
+    margin: 0;
+    padding: 0.5em 0;
+}
+
+.messages > div p {
+    margin: 0;
+}
+
+.messages > div label {
+    width: 100vw;
+}
