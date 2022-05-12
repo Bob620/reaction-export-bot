@@ -111,7 +111,7 @@ func (bot *Bot) OnReady(session *discordgo.Session, ready *discordgo.Ready) {
 			}{}
 
 			for _, mes := range selectedMessages {
-				if len(mes.Reactions) > 2 {
+				if len(mes.Reactions) > 1 {
 					for _, reaction := range mes.Reactions {
 						reacts, _ := session.MessageReactions(bot.state.SelectedChannel.ID, mes.ID, reaction.Emoji.APIName(), 100, "", "")
 						for _, user := range reacts {
@@ -183,6 +183,9 @@ func (bot *Bot) OnReady(session *discordgo.Session, ready *discordgo.Ready) {
 			}
 
 			_ = file.Close()
+			bot.w.Dispatch(func() {
+				bot.w.Eval("exportEnd()")
+			})
 		})
 
 		bot.w.Bind("ToggleMessage", func(id string, on bool) {
