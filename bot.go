@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/webview/webview"
+	"golang.org/x/exp/slices"
 	"html/template"
 	"os"
 	"sort"
@@ -104,25 +105,60 @@ func (bot *Bot) OnReady(session *discordgo.Session, ready *discordgo.Ready) {
 			selectedMessages := bot.state.Messages.GetSelected()
 			reactions := map[string]Person{}
 
+			MemberCache := map[string]*struct {
+				HasRoles bool
+				Member   *discordgo.Member
+			}{}
+
 			for _, mes := range selectedMessages {
-				for _, reaction := range mes.Reactions {
-					fmt.Println(*reaction.Emoji)
-					fmt.Println(mes.Content)
-					reacts, err := session.MessageReactions(bot.state.SelectedChannel.ID, mes.ID, reaction.Emoji.APIName(), 100, "", "")
-					fmt.Println(err)
-					for _, user := range reacts {
-						fmt.Println(reactions[user.ID])
-						if reactions[user.ID].ID == "" {
-							reactions[user.ID] = Person{
-								ID:            user.ID,
-								Name:          user.Username,
-								Discriminator: user.Discriminator,
-								EmoteCount: map[string]*discordgo.Emoji{
-									mes.ID: reaction.Emoji,
-								},
+				if len(mes.Reactions) > 2 {
+					for _, reaction := range mes.Reactions {
+						reacts, _ := session.MessageReactions(bot.state.SelectedChannel.ID, mes.ID, reaction.Emoji.APIName(), 100, "", "")
+						for _, user := range reacts {
+							if MemberCache[user.ID] == nil {
+								member, err := session.GuildMember(bot.state.SelectedGuild.ID, user.ID)
+								if err != nil {
+									break
+								}
+								hasRoles := true
+								for _, possibility := range bot.config.RoleSets {
+									worked := true
+									for _, role := range possibility {
+										if !slices.Contains(member.Roles, role) {
+											worked = false
+										}
+										if !worked {
+											break
+										}
+									}
+									if worked {
+										hasRoles = true
+										break
+									}
+								}
+								MemberCache[user.ID] = &struct {
+									HasRoles bool
+									Member   *discordgo.Member
+								}{
+									HasRoles: hasRoles,
+									Member:   member,
+								}
 							}
-						} else {
-							reactions[user.ID].EmoteCount[mes.ID] = reaction.Emoji
+
+							if MemberCache[user.ID].HasRoles {
+								if reactions[user.ID].ID == "" {
+									reactions[user.ID] = Person{
+										ID:            user.ID,
+										Name:          user.Username,
+										Discriminator: user.Discriminator,
+										EmoteCount: map[string]*discordgo.Emoji{
+											mes.ID: reaction.Emoji,
+										},
+									}
+								} else {
+									reactions[user.ID].EmoteCount[mes.ID] = reaction.Emoji
+								}
+							}
 						}
 					}
 				}
@@ -133,7 +169,6 @@ func (bot *Bot) OnReady(session *discordgo.Session, ready *discordgo.Ready) {
 				return
 			}
 
-			fmt.Println(reactions)
 			for _, person := range reactions {
 				line := fmt.Sprintf("%s#%s", person.Name, person.Discriminator)
 				for _, mes := range selectedMessages {
