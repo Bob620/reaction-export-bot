@@ -21,7 +21,8 @@ func MakeDiscordReplacer(session *discordgo.Session, guildId string) *DiscordRep
 	emotes := map[string]*discordgo.Emoji{}
 	roles := map[string]*discordgo.Role{}
 
-	for _, emote := range guild.Emojis {
+	emojis, _ := session.GuildEmojis(guildId)
+	for _, emote := range emojis {
 		emotes[emote.ID] = emote
 	}
 
@@ -45,7 +46,6 @@ func (replacer DiscordReplacerForGuild) GetEmote(id string) *discordgo.Emoji {
 func (replacer DiscordReplacerForGuild) ReplaceDiscordContent(message string) (string, map[string]*discordgo.Emoji) {
 	foundEmotes := map[string]*discordgo.Emoji{}
 	for _, str := range regReplaceDiscord.FindAllStringSubmatch(message, -1) {
-		fmt.Println(str)
 		emoteId := str[1]
 		roleId := str[2]
 
